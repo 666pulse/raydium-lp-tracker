@@ -1,11 +1,11 @@
 import { Connection, PublicKey } from "@solana/web3.js";
 import { Metaplex } from "@metaplex-foundation/js";
 
-const RAYDIUM_PUBLIC_KEY = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 const HTTP_URL = ""
 const WSS_URL = ""
 
-const RAYDIUM = new PublicKey(RAYDIUM_PUBLIC_KEY);
+const RAYDIUM = new PublicKey(RAYDIUM_POOL_V4_PROGRAM_ID);
 const INSTRUCTION_NAME = "initialize2";
 
 const conn = new Connection(HTTP_URL);
@@ -48,21 +48,24 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     });
 
    //@ts-ignore
-   const accounts = (tx?.transaction.message.instructions).find(ix => ix.programId.toBase58() === RAYDIUM_PUBLIC_KEY).accounts as PublicKey[];
+   const accounts = (tx?.transaction.message.instructions).find(ix => ix.programId.toBase58() === RAYDIUM_POOL_V4_PROGRAM_ID).accounts as PublicKey[];
 
     if (!accounts) {
       console.log("No accounts found in the transaction.");
       return;
     }
 
+    const poolIndex = 4;
     const tokenAIndex = 8;
     const tokenBIndex = 9;
 
     // console.log("accounts: ", accounts);
 
+    const poolAddrPk = accounts[poolIndex];
     const tokenA = accounts[tokenAIndex];
     const tokenB = accounts[tokenBIndex];
 
+    const poolAddr = poolAddrPk.toString();
     const mintAddr = tokenA.toString();
     const mintAddressPk = new PublicKey(mintAddr);
 
@@ -74,14 +77,15 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     let symbol = nft.symbol;
     let uri = nft.uri;
 
-    let updateAuthority = nft.updateAuthorityAddress;
-    let mintAuthority = nft.mint.mintAuthorityAddress;
-    let freezeAuthority = nft.mint.freezeAuthorityAddress;
+    let updateAuthority = nft.updateAuthorityAddress?.toString();
+    let mintAuthority = nft.mint.mintAuthorityAddress?.toString();
+    let freezeAuthority = nft.mint.freezeAuthorityAddress?.toString();
     let decimals = nft.mint.decimals;
 
     const displayData = [
       {
         Addr: mintAddr,
+        poolAddr: poolAddr,
         name: name,
         symbol: symbol,
         decimals: decimals,
