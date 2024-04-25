@@ -1,4 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
+import { Metaplex } from "@metaplex-foundation/js";
 
 const RAYDIUM_PUBLIC_KEY = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 const HTTP_URL = ""
@@ -7,9 +8,13 @@ const WSS_URL = ""
 const RAYDIUM = new PublicKey(RAYDIUM_PUBLIC_KEY);
 const INSTRUCTION_NAME = "initialize2";
 
-const connection = new Connection(HTTP_URL, {
+const conn = new Connection(HTTP_URL);
+
+const wssConn = new Connection(HTTP_URL, {
   wsEndpoint: WSS_URL,
 });
+
+const metaplex = new Metaplex(conn);
 
 async function startConnection(
   connection: Connection,
@@ -17,6 +22,7 @@ async function startConnection(
   searchInstruction: string,
 ): Promise<void> {
   console.log("Monitoring logs for program:", programAddress.toString());
+
   connection.onLogs(
     programAddress,
     ({ logs, err, signature }) => {
@@ -27,7 +33,7 @@ async function startConnection(
           "Signature for initialize2:",
           `https://explorer.solana.com/tx/${signature}`,
         );
-        fetchRaydiumMints(signature, connection);
+        fetchRaydiumMints(signature, wssConn);
       }
     },
     "finalized",
@@ -52,14 +58,37 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     const tokenAIndex = 8;
     const tokenBIndex = 9;
 
-    console.log("accounts: ", accounts);
+    // console.log("accounts: ", accounts);
 
-    const tokenAAccount = accounts[tokenAIndex];
-    const tokenBAccount = accounts[tokenBIndex];
+    const tokenA = accounts[tokenAIndex];
+    const tokenB = accounts[tokenBIndex];
+
+    const mintAddr = tokenA.toString();
+    const mintAddressPk = new PublicKey(mintAddr);
+
+    const nft = await metaplex
+      .nfts()
+      .findByMint({ mintAddress: mintAddressPk });
+
+    let name = nft.name;
+    let symbol = nft.symbol;
+    let uri = nft.uri;
+
+    let updateAuthority = nft.updateAuthorityAddress;
+    let mintAuthority = nft.mint.mintAuthorityAddress;
+    let freezeAuthority = nft.mint.freezeAuthorityAddress;
+    let decimals = nft.mint.decimals;
 
     const displayData = [
-      { Token: "A", "Account Public Key": tokenAAccount.toBase58() },
-      { Token: "B", "Account Public Key": tokenBAccount.toBase58() },
+      {
+        Addr: mintAddr,
+        name: name,
+        symbol: symbol,
+        decimals: decimals,
+        mintAuthority: mintAuthority,
+        freezeAuthority: freezeAuthority,
+      },
+      { Addr: tokenB.toBase58() },
     ];
 
     console.log("New LP Found");
@@ -71,6 +100,4 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
   }
 }
 
-startConnection(connection, RAYDIUM, INSTRUCTION_NAME).catch(console.error);
-
-// https://www.quicknode.com/guides/solana-development/3rd-party-integrations/track-raydium-lps
+startConnection(wssConn, RAYDIUM, INSTRUCTION_NAME).catch(console.error);
