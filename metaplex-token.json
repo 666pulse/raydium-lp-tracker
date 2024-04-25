@@ -1,0 +1,51 @@
+{
+  "model": "sft",
+  "updateAuthorityAddress": "AvJZyYXhBS5sKenjAvRuBnA5dRCMPvJgguRzF7HafXHW",
+  "json": null,
+  "jsonLoaded": true,
+  "name": "Pepe Le Pew",
+  "symbol": "PEW",
+  "uri": "https://bafkreiblfaegsjmrh4yf23j23cbft26iceajj7haedg5zzlhndhjbfiewy.ipfs.nftstorage.link",
+  "isMutable": false,
+  "primarySaleHappened": false,
+  "sellerFeeBasisPoints": 0,
+  "editionNonce": 255,
+  "creators": [{
+    "address": "AvJZyYXhBS5sKenjAvRuBnA5dRCMPvJgguRzF7HafXHW",
+    "verified": true,
+    "share": 100
+  }],
+  "tokenStandard": 2,
+  "collection": null,
+  "collectionDetails": null,
+  "uses": null,
+  "programmableConfig": null,
+  "address": "3uWdyDapU12jjzb3PjvVW3SqwV3UZM3p1Am7AJRqXPKj",
+  "metadataAddress": "8oBM1kXNP1hBCwF1539ek465B4aa52kdNYnACrd35ejf",
+  "mint": {
+    "model": "mint",
+    "address": "3uWdyDapU12jjzb3PjvVW3SqwV3UZM3p1Am7AJRqXPKj",
+    "mintAuthorityAddress": null,
+    "freezeAuthorityAddress": null,
+    "decimals": 9,
+    "supply": {
+      "basisPoints": "016345785d8a0000",
+      "currency": {
+        "symbol": "PEW",
+        "decimals": 9,
+        "namespace": "spl-token"
+      }
+    },
+    "isWrappedSol": false,
+    "currency": {
+      "symbol": "PEW",
+      "decimals": 9,
+      "namespace": "spl-token"
+    }
+  }
+}
+
+
+https://bafkreiblfaegsjmrh4yf23j23cbft26iceajj7haedg5zzlhndhjbfiewy.ipfs.nftstorage.link/
+
+3uWdyDapU12jjzb3PjvVW3SqwV3UZM3p1Am7AJRqXPKj
