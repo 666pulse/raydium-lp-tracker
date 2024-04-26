@@ -1,17 +1,23 @@
-import { Connection, PublicKey } from "@solana/web3.js";
-import { Metaplex } from "@metaplex-foundation/js";
 import {
-  TOKEN_PROGRAM_ID,
-  MARKET_STATE_LAYOUT_V3,
+  Connection,
+  PublicKey,
+  ParsedInstruction,
+  ParsedInnerInstruction,
+} from "@solana/web3.js";
+import { Metaplex } from "@metaplex-foundation/js";
+import { OpenOrders } from "@project-serum/serum";
+import {
   Market,
+  TOKEN_PROGRAM_ID,
   LiquidityPoolKeysV4,
+  MARKET_STATE_LAYOUT_V3,
 } from "@raydium-io/raydium-sdk";
 
-const RAYDIUM_POOL_V4_PROGRAM_ID =
-  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 const HTTP_URL = ""
 const WSS_URL = ""
 
+const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+const OPENBOOK_PROGRAM_ID = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
 const RAYDIUM = new PublicKey(RAYDIUM_POOL_V4_PROGRAM_ID);
 const INSTRUCTION_NAME = "initialize2";
 
@@ -46,6 +52,30 @@ async function startConnection(
   );
 }
 
+function findMintToInInnerInstructionsByMintAddress(
+  innerInstructions: Array<ParsedInnerInstruction>,
+  mintAddress: PublicKey,
+): ParsedInstruction | null {
+  for (let i = 0; i < innerInstructions.length; i++) {
+    for (let y = 0; y < innerInstructions[i].instructions.length; y++) {
+      const instruction = innerInstructions[i].instructions[
+        y
+      ] as ParsedInstruction;
+      if (!instruction.parsed) {
+        continue;
+      }
+      if (
+        instruction.parsed.type === "mintTo" &&
+        instruction.parsed.info.mint === mintAddress.toBase58()
+      ) {
+        return instruction;
+      }
+    }
+  }
+
+  return null;
+}
+
 async function fetchMarketInfo(conn: Connection, marketId: PublicKey) {
   const marketAccountInfo = await conn.getAccountInfo(marketId);
   if (!marketAccountInfo) {
@@ -73,10 +103,11 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     }
 
     const poolIndex = 4;
-    const marketIdIndex = 16;
+    const openOrdersIndex = 6;
     const lpMintIndex = 7;
     const tokenAIndex = 8;
     const tokenBIndex = 9;
+    const marketIdIndex = 16;
 
     // console.log("accounts: ", accounts);
 
@@ -84,6 +115,8 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     const tokenA = accounts[tokenAIndex];
     const tokenB = accounts[tokenBIndex];
     const marketIdPk = accounts[marketIdIndex];
+    const openOrdersAccount = accounts[openOrdersIndex];
+    const lpMintAccount = accounts[lpMintIndex];
 
     const poolAddr = poolAddrPk.toString();
     const mintAddr = tokenA.toString();
@@ -122,8 +155,48 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     const marketInfo = await fetchMarketInfo(connection, marketIdPk);
 
     console.log(/marketInfo/);
-    console.log(marketInfo);
+    console.log(JSON.stringify(marketInfo));
     console.log(/marketInfo/);
+
+    const lpMintInstruction = findMintToInInnerInstructionsByMintAddress(
+      tx?.meta?.innerInstructions ?? [],
+      lpMintAccount,
+    );
+    if (!lpMintInstruction) {
+      throw new Error("Failed to find lp mint to instruction in lp init tx");
+    }
+
+    const _baseTokenAmount = await connection.getTokenAccountBalance(
+      new PublicKey(marketInfo.baseVault),
+    );
+
+    const _quoteTokenAmount = await connection.getTokenAccountBalance(
+      new PublicKey(marketInfo.quoteVault),
+    );
+
+    const lpVaultAccount = new PublicKey(lpMintInstruction.parsed.info.account);
+    const _lpVault = await connection.getTokenAccountBalance(lpVaultAccount);
+
+    const baseTokenAmount = _baseTokenAmount.value?.uiAmount;
+    const quoteTokenAmount = _quoteTokenAmount.value?.uiAmount;
+    const lpVault = _lpVault.value?.uiAmount;
+
+    console.log();
+    console.log(baseTokenAmount);
+    console.log(quoteTokenAmount);
+    console.log(lpVault);
+    console.log();
+
+    const openOrders = await OpenOrders.load(
+      connection,
+      openOrdersAccount,
+      new PublicKey(OPENBOOK_PROGRAM_ID),
+    );
+
+    console.log(/openOrders/);
+    console.log(JSON.stringify(openOrders));
+    console.log(/openOrders/);
+
   } catch {
     console.log("Error fetching transaction:", txId);
     return;
