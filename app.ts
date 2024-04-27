@@ -16,10 +16,15 @@ import {
 const HTTP_URL = ""
 const WSS_URL = ""
 
-const RAYDIUM_POOL_V4_PROGRAM_ID = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
+const RAYDIUM_POOL_V4_PROGRAM_ID =
+  "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8";
 const OPENBOOK_PROGRAM_ID = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
 const RAYDIUM = new PublicKey(RAYDIUM_POOL_V4_PROGRAM_ID);
-const INSTRUCTION_NAME = "initialize2";
+// const INSTRUCTION_NAME = "initialize2";
+const INSTRUCTION_NAME = "init_pc_amount";
+
+const SOL_TOKEN = "So11111111111111111111111111111111111111112";
+const SOL_DECIMALS = 9;
 
 const conn = new Connection(HTTP_URL);
 const wssConn = new Connection(HTTP_URL, {
@@ -52,6 +57,19 @@ async function startConnection(
   );
 }
 
+function findLogEntry(
+  needle: string,
+  logEntries: Array<string>,
+): string | null {
+  for (let i = 0; i < logEntries.length; ++i) {
+    if (logEntries[i].includes(needle)) {
+      return logEntries[i];
+    }
+  }
+
+  return null;
+}
+
 function findMintToInInnerInstructionsByMintAddress(
   innerInstructions: Array<ParsedInnerInstruction>,
   mintAddress: PublicKey,
@@ -74,6 +92,28 @@ function findMintToInInnerInstructionsByMintAddress(
   }
 
   return null;
+}
+
+function extractLPInitializationLogEntryInfoFromLogEntry(lpLogEntry: string): {
+  nonce: number;
+  open_time: number;
+  init_pc_amount: number;
+  init_coin_amount: number;
+} {
+  const lpInitializationLogEntryInfoStart = lpLogEntry.indexOf("{");
+
+  return JSON.parse(
+    fixRelaxedJsonInLpLogEntry(
+      lpLogEntry.substring(lpInitializationLogEntryInfoStart),
+    ),
+  );
+}
+
+function fixRelaxedJsonInLpLogEntry(relaxedJson: string): string {
+  return relaxedJson.replace(
+    /([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g,
+    '$1"$2":',
+  );
 }
 
 async function fetchMarketInfo(conn: Connection, marketId: PublicKey) {
@@ -107,6 +147,8 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     const lpMintIndex = 7;
     const tokenAIndex = 8;
     const tokenBIndex = 9;
+    const baseVaultIndex = 10;
+    const quoteVaultIndex = 11;
     const marketIdIndex = 16;
 
     // console.log("accounts: ", accounts);
@@ -135,10 +177,29 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     let freezeAuthority = nft.mint.freezeAuthorityAddress?.toString();
     let decimals = nft.mint.decimals;
 
+    const baseAndQuoteSwapped = tokenA.toBase58() === SOL_TOKEN;
+
+    const basePreBalance = (tx?.meta?.preTokenBalances ?? []).find(
+      (balance) => balance.mint === tokenA.toBase58(),
+    );
+
+    if (!basePreBalance) {
+      throw new Error(
+        "Failed to find base tokens preTokenBalance entry to parse the base tokens decimals",
+      );
+    }
+
+    const lpInitializationLogEntryInfo =
+      extractLPInitializationLogEntryInfoFromLogEntry(
+        findLogEntry("init_pc_amount", tx?.meta?.logMessages ?? []) ?? "",
+      );
+    const openTime = lpInitializationLogEntryInfo.open_time;
+
     const displayData = [
       {
         Addr: mintAddr,
         poolAddr: poolAddr,
+        openTime: openTime,
         name: name,
         symbol: symbol,
         decimals: decimals,
@@ -187,16 +248,15 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
     console.log(lpVault);
     console.log();
 
-    const openOrders = await OpenOrders.load(
+    const openOrder = await OpenOrders.load(
       connection,
       openOrdersAccount,
       new PublicKey(OPENBOOK_PROGRAM_ID),
     );
 
     console.log(/openOrders/);
-    console.log(JSON.stringify(openOrders));
+    console.log(JSON.stringify(openOrder));
     console.log(/openOrders/);
-
   } catch {
     console.log("Error fetching transaction:", txId);
     return;
