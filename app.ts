@@ -165,8 +165,10 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
 
     const displayData = [
       {
-        addr: mintAddr,
+        pair1Addr: mintAddr,
+        pair2Addr: tokenB.toBase58(),
         poolAddr: poolAddr,
+        liquidity: `${pnl} SOL`,
         openTime: openTime,
         name: name,
         symbol: symbol,
@@ -174,14 +176,13 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
         mintAuthority: mintAuthority,
         freezeAuthority: freezeAuthority,
       },
-      { addr: tokenB.toBase58(), pnl: pnl },
     ];
 
     console.log("New LP Found");
     console.table(displayData);
     console.log();
 
-    await fetchMarketInfo(connection, marketIdAccount);
+    // await fetchMarketInfo(connection, marketIdAccount);
   } catch {
     console.log("Error fetching transaction:", txId);
     return;
