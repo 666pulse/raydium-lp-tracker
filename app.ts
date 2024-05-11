@@ -2,8 +2,8 @@ import { Metaplex } from "@metaplex-foundation/js";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { MARKET_STATE_LAYOUT_V3 } from "@raydium-io/raydium-sdk";
 
-const HTTP_URL = ""
-const WSS_URL = ""
+const HTTP_URL = "";
+const WSS_URL = "";
 
 const OPENBOOK_PROGRAM_ID = "srmqPvymJeFKQ4zGQed1GFppgkRHL9kaELCbyksJtPX";
 const raydiumAuthority = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1";
@@ -26,7 +26,7 @@ const metaplex = new Metaplex(conn);
 async function startConnection(
   connection: Connection,
   programAddress: PublicKey,
-  searchInstruction: string,
+  searchInstruction: string
 ): Promise<void> {
   console.log("Monitoring logs for program: ", programAddress.toString());
 
@@ -40,7 +40,7 @@ async function startConnection(
         console.log("--------------------");
         console.log(
           "Signature for initialize2:",
-          `https://explorer.solana.com/tx/${signature}`,
+          `https://explorer.solana.com/tx/${signature}`
         );
 
         console.log(`https://solscan.io/tx/${signature}`);
@@ -48,17 +48,17 @@ async function startConnection(
         fetchRaydiumMints(signature, wssConn);
       }
     },
-    "finalized",
+    "finalized"
   );
 }
 
 function findLogEntry(
   needle: string,
-  logEntries: Array<string>,
+  logEntries: Array<string>
 ): string | null {
-  for (let i = 0; i < logEntries.length; ++i) {
-    if (logEntries[i].includes(needle)) {
-      return logEntries[i];
+  for (const element of logEntries) {
+    if (element.includes(needle)) {
+      return element;
     }
   }
 
@@ -75,15 +75,15 @@ function extractLPInitializationLogEntryInfoFromLogEntry(lpLogEntry: string): {
 
   return JSON.parse(
     fixRelaxedJsonInLpLogEntry(
-      lpLogEntry.substring(lpInitializationLogEntryInfoStart),
-    ),
+      lpLogEntry.substring(lpInitializationLogEntryInfoStart)
+    )
   );
 }
 
 function fixRelaxedJsonInLpLogEntry(relaxedJson: string): string {
   return relaxedJson.replace(
     /([{,])\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g,
-    '$1"$2":',
+    '$1"$2":'
   );
 }
 
@@ -91,7 +91,7 @@ async function fetchMarketInfo(conn: Connection, marketId: PublicKey) {
   const marketAccountInfo = await conn.getAccountInfo(marketId);
   if (!marketAccountInfo) {
     throw new Error(
-      "Failed to fetch market info for market id " + marketId.toBase58(),
+      "Failed to fetch market info for market id " + marketId.toBase58()
     );
   }
 
@@ -105,8 +105,10 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
       commitment: "confirmed",
     });
 
-   //@ts-ignore
-   const accounts = (tx?.transaction.message.instructions).find(ix => ix.programId.toBase58() === RAYDIUM_POOL_V4_PROGRAM_ID).accounts as PublicKey[];
+    //@ts-ignore
+    const accounts = tx?.transaction.message.instructions.find(
+      (ix) => ix.programId.toBase58() === RAYDIUM_POOL_V4_PROGRAM_ID
+    )?.programId as PublicKey[];
 
     if (!accounts) {
       console.log("No accounts found in the transaction");
@@ -149,7 +151,7 @@ async function fetchRaydiumMints(txId: string, connection: Connection) {
 
     const lpInitializationLogEntryInfo =
       extractLPInitializationLogEntryInfoFromLogEntry(
-        findLogEntry("init_pc_amount", tx?.meta?.logMessages ?? []) ?? "",
+        findLogEntry("init_pc_amount", tx?.meta?.logMessages ?? []) ?? ""
       );
 
     const initCoinAmount = lpInitializationLogEntryInfo.init_coin_amount;
